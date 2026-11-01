@@ -143,7 +143,7 @@ test.describe('快捷链接', () => {
   });
 
   test('点击链接在新标签页打开目标网址', async ({ page, context }) => {
-    await context.route('https://example.com/**', (route) =>
+    await context.route(/^https:\/\/example\.com(?:\/|$)/, (route) =>
       route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>ok</body></html>' })
     );
     await page.getByTestId('link-name-input').fill('示例网站');
