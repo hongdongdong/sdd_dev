@@ -1,0 +1,13 @@
+{
+  "name": "sdd-pipeline-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e:server": "node e2e/server.mjs",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "playwright": "^1.57.0"
+  }
+}
