@@ -66,11 +66,11 @@ console.log(total.input+" / "+total.output);
 log "读取需求卡 $RECORD_ID"
 DEMAND=$("$LARK_CLI" base +record-get --as user --base-token "$LARK_BASE_TOKEN" \
   --table-id "$LARK_TABLE_ID" --record-id "$RECORD_ID" --format json) || die "读取需求卡失败"
-TITLE=$(echo "$DEMAND" | js 'const r=j.data?.records?.[0]?.fields; console.log((r&&r["需求标题"])||"")')
-DESC=$(echo "$DEMAND" | js 'const r=j.data?.records?.[0]?.fields; console.log((r&&r["需求描述"])||"")')
+TITLE=$(echo "$DEMAND" | js 'const d=j.data;const i=(d.fields||[]).indexOf("需求标题");const v=(d.data||[])[0]?.[i];console.log(Array.isArray(v)?(v[0]??""):(v??""))')
+DESC=$(echo "$DEMAND" | js 'const d=j.data;const i=(d.fields||[]).indexOf("需求描述");const v=(d.data||[])[0]?.[i];console.log(Array.isArray(v)?(v[0]??""):(v??""))')
 [ -n "$TITLE" ] || die "需求卡缺少「需求标题」"
 log "需求: $TITLE"
-SLUG=$(echo "$TITLE" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(s.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40)||"demand"))')
+SLUG="demand-$(echo "$RECORD_ID" | tr 'A-Z' 'a-z')"   # OpenSpec change 名要求全小写 kebab-case
 
 # ---------- 2. 状态 → 进行中 ----------
 "$LARK_CLI" base +record-batch-update --as user --base-token "$LARK_BASE_TOKEN" --table-id "$LARK_TABLE_ID" \
@@ -78,7 +78,7 @@ SLUG=$(echo "$TITLE" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("en
 
 # ---------- 3. 开分支 ----------
 cd "$REPO_DIR"
-BRANCH="demand/$RECORD_ID-$SLUG"
+BRANCH="demand/$SLUG"
 git checkout -q main 2>/dev/null || git checkout -q -b main
 if git remote get-url origin >/dev/null 2>&1; then git pull -q --ff-only origin main 2>/dev/null || true; fi
 git checkout -q -b "$BRANCH" || die "创建分支失败"
@@ -121,10 +121,11 @@ log "apply 完成，tokens: $USAGE_APPLY"
 log "提交并推送 $BRANCH"
 git add -A
 git commit -q -m "$SLUG: $TITLE" || log "无改动可提交"
+PUSH_URL="https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git"
 if ! git remote get-url origin >/dev/null 2>&1; then
-  git remote add origin "https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git"
+  git remote add origin "https://github.com/${GITHUB_REPO}.git"
 fi
-git push -q -u origin "$BRANCH" 2>/dev/null || die "推送失败（检查 GITHUB_TOKEN 与仓库 ${GITHUB_REPO}）"
+git push -q -u "$PUSH_URL" "$BRANCH" 2>/dev/null || die "推送失败（检查 GITHUB_TOKEN 与仓库 ${GITHUB_REPO}）"
 MR_JSON=$(curl -s -X POST "https://api.github.com/repos/${GITHUB_REPO}/pulls" \
   -H "Authorization: Bearer ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" \
   -d "{\"title\":\"$SLUG: $TITLE\",\"head\":\"$BRANCH\",\"base\":\"main\"}") || die "创建 MR 失败"
@@ -151,7 +152,7 @@ E2E_STATUS="pass"
 if [ -n "$PW_LD_PATH" ] && [ -d "$PW_LD_PATH" ]; then
   export LD_LIBRARY_PATH="$PW_LD_PATH"
 fi
-if ! npx playwright test "e2e/generated-${SLUG}.spec.js" > e2e/reports/run.log 2>&1; then
+if ! npx playwright test "generated-${SLUG}.spec.js" > e2e/reports/run.log 2>&1; then
   log "E2E 未通过，进入一轮修复"
   cat > /tmp/fix-prompt.txt << EOF
 Playwright E2E 对 app/ 的验收未通过。测试输出如下，请修复 app/ 里的实现代码使其通过（不改测试用例）：
@@ -159,7 +160,7 @@ $(tail -c 6000 e2e/reports/run.log)
 EOF
   "$CODEX_BIN" exec --json --ephemeral -C "$REPO_DIR" --dangerously-bypass-approvals-and-sandbox \
     < /tmp/fix-prompt.txt > "$CODEX_HOME_DIR/fix.log" 2>&1 || true
-  if npx playwright test "e2e/generated-${SLUG}.spec.js" > e2e/reports/run.log 2>&1; then
+  if npx playwright test "generated-${SLUG}.spec.js" > e2e/reports/run.log 2>&1; then
     log "修复后 E2E 通过"
   else
     E2E_STATUS="fail"
@@ -167,7 +168,7 @@ EOF
   fi
   USAGE_FIX=$(codex_usage "$CODEX_HOME_DIR/fix.log")
   git add -A && git commit -q -m "$SLUG: e2e 修复" 2>/dev/null || true
-  git push -q origin "$BRANCH" 2>/dev/null || true
+  git push -q "$PUSH_URL" "$BRANCH" 2>/dev/null || true
 fi
 
 # 汇总报告
@@ -175,8 +176,8 @@ REPORT_MD="e2e/reports/${SLUG}-report.md"
 node - "$REPORT_MD" "$SLUG" "$TITLE" "$E2E_STATUS" << 'EOF'
 const fs=require('fs');const [file,slug,title,status]=process.argv.slice(2);
 let runLog='';try{runLog=fs.readFileSync('e2e/reports/run.log','utf8').slice(-4000)}catch{}
-const m=runLog.match(/(\d+)\s+passed[\s\S]*?(\d+)\s+failed/);
-const summary=m?`通过 ${m[1]} / 失败 ${m[2]}`:(status==='pass'?'全部通过':'存在失败');
+const p=(runLog.match(/(\d+)\s+passed/)||[])[1]; const f=(runLog.match(/(\d+)\s+failed/)||[])[1];
+const summary=`通过 ${p||0} / 失败 ${f||0}`;
 fs.writeFileSync(file,`# E2E 验收报告 · ${title}\n\n- Change: ${slug}\n- 结果: ${status==='pass'?'通过':'未通过'}（${summary}）\n- 时间: ${new Date().toISOString()}\n\n## 运行输出（尾部）\n\n\`\`\`\n${runLog}\n\`\`\`\n`);
 EOF
 log "报告: $REPORT_MD（$E2E_STATUS）"

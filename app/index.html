@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>个人工作台</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>个人工作台</h1>
+      <p class="app-subtitle">待办清单 · 笔记 · 快捷链接，数据保存在本机浏览器</p>
+    </header>
+
+    <main class="app-main">
+      <section class="module" id="todo-section" data-testid="todo-section">
+        <h2>待办清单</h2>
+        <form class="module-form" id="todo-form" data-testid="todo-form">
+          <input id="todo-input" data-testid="todo-input" type="text" placeholder="输入待办内容" autocomplete="off" />
+          <button type="submit" data-testid="todo-add">添加</button>
+        </form>
+        <p class="feedback" id="todo-feedback" data-testid="todo-feedback" role="status" aria-live="polite"></p>
+        <ul class="module-list" id="todo-list" data-testid="todo-list"></ul>
+      </section>
+
+      <section class="module" id="note-section" data-testid="note-section">
+        <h2>笔记</h2>
+        <form class="module-form" id="note-form" data-testid="note-form">
+          <textarea id="note-input" data-testid="note-input" placeholder="输入笔记内容"></textarea>
+          <button type="submit" data-testid="note-add">保存笔记</button>
+        </form>
+        <p class="feedback" id="note-feedback" data-testid="note-feedback" role="status" aria-live="polite"></p>
+        <ul class="module-list" id="note-list" data-testid="note-list"></ul>
+      </section>
+
+      <section class="module" id="link-section" data-testid="link-section">
+        <h2>快捷链接</h2>
+        <form class="module-form" id="link-form" data-testid="link-form">
+          <input id="link-name-input" data-testid="link-name-input" type="text" placeholder="链接名称" autocomplete="off" />
+          <input id="link-url-input" data-testid="link-url-input" type="text" placeholder="https://example.com" autocomplete="off" />
+          <button type="submit" data-testid="link-add">添加链接</button>
+        </form>
+        <p class="feedback" id="link-feedback" data-testid="link-feedback" role="status" aria-live="polite"></p>
+        <ul class="module-list" id="link-list" data-testid="link-list"></ul>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
