@@ -1,0 +1,235 @@
+:root {
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --danger: #dc2626;
+  --danger-bg: #fee2e2;
+  --success: #16a34a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.app-header {
+  padding: 28px 24px 16px;
+  text-align: center;
+}
+
+.app-header h1 {
+  margin: 0 0 4px;
+  font-size: 28px;
+}
+
+.app-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.app-main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 16px 24px 40px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.module {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.module h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.module-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.module-form input,
+.module-form textarea {
+  flex: 1 1 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  color: var(--text);
+}
+
+.module-form textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+#link-form input {
+  flex: 1 1 calc(50% - 8px);
+  min-width: 0;
+}
+
+.module-form button,
+.module-list button {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.module-form button:hover,
+.module-list button:hover {
+  background: var(--primary-dark);
+}
+
+.module-list button.danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.module-list button.danger:hover {
+  background: var(--danger-bg);
+}
+
+.module-list button.secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.module-list button.secondary:hover {
+  background: #eff6ff;
+}
+
+.feedback {
+  min-height: 20px;
+  margin: 8px 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.module-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.todo-item,
+.note-item,
+.link-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.todo-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.todo-check input {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.todo-text {
+  overflow-wrap: anywhere;
+}
+
+.todo-text.done {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.note-content,
+.link-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.note-content {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.note-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.link-open {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.link-open:hover {
+  text-decoration: underline;
+}
+
+.link-url {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.edit-row {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.edit-row input,
+.edit-row textarea {
+  flex: 1 1 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.item-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
