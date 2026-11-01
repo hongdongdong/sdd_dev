@@ -62,6 +62,22 @@ for(const line of fs.readFileSync(process.argv[1],"utf8").split("\n")){
 console.log(total.input+" / "+total.output);
 ' "$1"; }
 
+# 生成工作台「研发」模块的产物清单 app/rd/artifacts.json
+write_artifacts(){ local st="$1" rurl="$2" adir; adir=$(ls -d openspec/changes/archive/*-"$SLUG" 2>/dev/null | head -1 || true)
+  [ -n "$adir" ] || return 0
+  node - "$adir" "$RECORD_ID" "$TITLE" "$st" "$BRANCH" "$MR_URL" "$rurl" "${TOTAL_TOKENS:-}" << 'EOF'
+const fs=require('fs'),path=require('path');
+const [dir,record,title,status,branch,mr,report,cost]=process.argv.slice(2);
+const titles={'proposal.md':'变更提案 proposal.md','design.md':'设计说明 design.md','tasks.md':'任务清单 tasks.md'};
+const files=['proposal.md','design.md','tasks.md'];
+const specsDir=path.join(dir,'specs');
+if(fs.existsSync(specsDir)){for(const f of fs.readdirSync(specsDir)){const sp=path.join(specsDir,f,'spec.md');if(fs.existsSync(sp))files.push('specs/'+f+'/spec.md');}}
+const artifacts=files.map(f=>{let c='';try{c=fs.readFileSync(path.join(dir,f),'utf8');}catch{}return{name:f,title:titles[f]||('能力 Spec · '+(f.split('/')[1]||f)),content:c};});
+fs.mkdirSync('app/rd',{recursive:true});
+fs.writeFileSync('app/rd/artifacts.json',JSON.stringify({generated_at:new Date().toISOString(),demand:{record_id:record,title,status,branch,mr_url:mr,report_url:report||'',cost:cost||''},artifacts},null,2));
+EOF
+}
+
 # ---------- 1. 读需求 ----------
 log "读取需求卡 $RECORD_ID"
 DEMAND=$("$LARK_CLI" base +record-get --as user --base-token "$LARK_BASE_TOKEN" \
@@ -132,11 +148,15 @@ MR_JSON=$(curl -s -X POST "https://api.github.com/repos/${GITHUB_REPO}/pulls" \
 MR_URL=$(echo "$MR_JSON" | js 'console.log(j.html_url||j.message||"")')
 log "MR: $MR_URL"
 
+# ---------- 8.5 产物清单写入工作台（E2E 阶段即可见） ----------
+write_artifacts "进行中" ""
+
 # ---------- 9. E2E ----------
 log "Codex 根据验收标准生成 E2E 用例"
 cat > /tmp/e2e-prompt.txt << EOF
 根据 openspec/changes/archive/ 或 openspec/specs/ 中与本需求「$TITLE」相关的验收标准，生成 Playwright 用例文件 e2e/generated-${SLUG}.spec.js。
 要求：使用 page.goto('/') 访问 app/ 的应用（静态服务器已在 http://127.0.0.1:${E2E_PORT} 运行）；覆盖全部验收标准；用中文描述测试名。
+注意：所有用例与 beforeEach 必须写在 test.describe() 块内，不要在文件顶层调用 test.beforeEach()（Playwright 会报错）。不要改动 e2e/ 目录下其它已有文件。
 EOF
 "$CODEX_BIN" exec --json --ephemeral -C "$REPO_DIR" --dangerously-bypass-approvals-and-sandbox \
   < /tmp/e2e-prompt.txt > "$CODEX_HOME_DIR/e2egen.log" 2>&1 || die "E2E 用例生成失败"
@@ -202,6 +222,11 @@ const f={"状态":[st],"分支":branch,"MR链接":mr,"成本":cost,"备注":"E2E
 if(report)f["报告链接"]=report;
 console.log(JSON.stringify({update_records:{[rec]:f}}));
 ' "$RECORD_ID" "$BRANCH" "$MR_URL" "$REPORT_URL" "$TOTAL_TOKENS" "$FINAL_STATUS")" >/dev/null || die "回写需求卡失败"
+
+# ---------- 10.5 更新产物清单并推送 ----------
+write_artifacts "$FINAL_STATUS" "$REPORT_URL"
+git add app/rd/artifacts.json 2>/dev/null
+git commit -q -m "$SLUG: 更新流水线产物清单" 2>/dev/null && git push -q "$PUSH_URL" "$BRANCH" 2>/dev/null || log "产物清单提交/推送跳过"
 
 log "完成。状态=$FINAL_STATUS 分支=$BRANCH"
 log "MR: ${MR_URL:-（无）}"

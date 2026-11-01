@@ -233,3 +233,59 @@ body {
   gap: 8px;
   flex: none;
 }
+
+/* 研发模块 */
+.rd-summary {
+  font-size: 14px;
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+
+.rd-summary p {
+  margin: 4px 0;
+}
+
+.rd-label {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.rd-summary a {
+  display: inline-block;
+  margin: 4px 12px 0 0;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.rd-summary a:hover {
+  text-decoration: underline;
+}
+
+.rd-artifact-item button {
+  width: 100%;
+  text-align: left;
+  background: #f5f7fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.rd-artifact-item button:hover {
+  background: #eef2f7;
+}
+
+.rd-content {
+  margin-top: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 420px;
+  overflow: auto;
+}

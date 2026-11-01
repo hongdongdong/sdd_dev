@@ -4,6 +4,7 @@ const TODO_ITEMS = 'ul[data-testid="todo-list"] li[data-testid="todo-item"]';
 const NOTE_ITEMS = 'ul[data-testid="note-list"] li[data-testid="note-item"]';
 const LINK_ITEMS = 'ul[data-testid="link-list"] li[data-testid="link-item"]';
 
+test.describe('个人工作台', () => {
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
@@ -217,4 +218,5 @@ test.describe('模块隔离', () => {
     await expect(page.getByTestId('note-content')).toContainText('只属于笔记');
     await expect(page.getByTestId('link-open')).toHaveText('只属于链接');
   });
+});
 });

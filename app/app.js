@@ -426,6 +426,78 @@
     renderLinks();
   }
 
+  // ===== 研发模块：展示流水线产物（rd/artifacts.json） =====
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function showArtifact(art) {
+    const content = $('rd-artifact-content');
+    content.hidden = false;
+    content.textContent = art.content || '（无内容）';
+    content.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function renderRd() {
+    const summary = $('rd-summary');
+    const list = $('rd-artifact-list');
+    summary.textContent = '';
+    fetch('rd/artifacts.json', { cache: 'no-store' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        const d = data.demand || {};
+        const rows = [
+          ['需求', (d.title || '—') + '（状态：' + (d.status || '—') + '）'],
+          ['分支', d.branch || '—'],
+          ['成本', d.cost || '—'],
+        ];
+        rows.forEach(function (row) {
+          const p = document.createElement('p');
+          p.innerHTML = '<span class="rd-label">' + row[0] + '</span>' + escapeHtml(row[1]);
+          summary.appendChild(p);
+        });
+        [['MR', d.mr_url, 'rd-mr-link'], ['E2E 报告', d.report_url, 'rd-report-link']].forEach(function (link) {
+          if (!link[1]) return;
+          const a = document.createElement('a');
+          a.href = link[1];
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = link[0] + ' ↗';
+          a.dataset.testid = link[2];
+          summary.appendChild(a);
+        });
+
+        list.textContent = '';
+        (data.artifacts || []).forEach(function (art, i) {
+          const li = document.createElement('li');
+          li.className = 'rd-artifact-item';
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = (i + 1) + '. ' + (art.title || art.name);
+          btn.dataset.testid = 'rd-artifact-item';
+          btn.addEventListener('click', function () {
+            showArtifact(art);
+          });
+          li.appendChild(btn);
+          list.appendChild(li);
+        });
+        if (!(data.artifacts || []).length) {
+          const li = document.createElement('li');
+          li.textContent = '暂无产物';
+          list.appendChild(li);
+        }
+      })
+      .catch(function () {
+        summary.textContent = '暂无流水线产物（跑一次流水线后自动生成 rd/artifacts.json）';
+      });
+  }
+
   $('todo-form').addEventListener('submit', function (event) {
     event.preventDefault();
     addTodo();
@@ -443,4 +515,5 @@
 
   ensureStorageKeys();
   renderAll();
+  renderRd();
 })();

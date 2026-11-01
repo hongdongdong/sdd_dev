@@ -53,12 +53,17 @@ scripts/run_pipeline.sh <记录ID>
 ## 目录结构
 
 ```
-app/                    # 流水线产物：个人工作台单页应用
+app/                    # 流水线产物：个人工作台单页应用（待办/笔记/快捷链接/研发 四模块）
+app/rd/artifacts.json   # 流水线自动生成的需求产物清单（研发模块的数据源）
 openspec/               # OpenSpec 根目录（changes / specs / archive）
 scripts/run_pipeline.sh # 编排脚本
 e2e/                    # 生成的 E2E 用例 + 静态服务器 + 报告
 AGENTS.md               # 仓库 Agent 规则（分流、EARS、产物生命周期）
 ```
+
+## 研发模块（TeamSpace 面板雏形）
+
+工作台第 4 个模块「研发」展示最近一次流水线的产物：需求标题/状态、分支、成本、MR 与 E2E 报告链接，以及 proposal / design / tasks / 能力 Spec 的正文。数据来自流水线每次运行后写入的 `app/rd/artifacts.json`，随代码一起提交、随分支一起评审。
 
 ## 已知边界（最小版本之外，留待下一轮）
 

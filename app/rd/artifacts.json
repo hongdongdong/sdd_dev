@@ -1,0 +1,44 @@
+{
+  "generated_at": "2026-11-01T08:43:06.007Z",
+  "demand": {
+    "record_id": "reczz28UKFPtdRuI",
+    "title": "创建个人工作台",
+    "status": "已完成",
+    "branch": "demand/demand-reczz28ukfptdrui",
+    "mr_url": "https://github.com/hongdongdong/sdd_dev/pull/1",
+    "report_url": "https://oceanpayment.feishu.cn/file/VvJdbRlq3oPSQpxc8RFc2ehmnOe",
+    "cost": "输入 8200360 / 输出 138868 tokens · deepseek-v4-pro"
+  },
+  "artifacts": [
+    {
+      "name": "proposal.md",
+      "title": "变更提案 proposal.md",
+      "content": "# Proposal\n\n## Why\n\n需要一个无需后端即可日常使用的个人工作台，把待办清单、笔记、快捷链接集中在一个单页应用中管理。现有仓库只有流水线骨架，`app/` 目录为空，用户缺少一个可立即打开、数据本地保存的轻量工具。\n\n## What Changes\n\n- 新增个人工作台单页应用，部署在 `app/` 目录，纯静态页面 + 浏览器本地存储，不引入后端。\n- 新增「待办清单」模块：支持新增、标记完成/未完成、删除待办，并在浏览器本地持久化。\n- 新增「笔记」模块：支持新增、编辑、删除笔记，并在浏览器本地持久化。\n- 新增「快捷链接」模块：支持新增、编辑、删除快捷链接并打开目标地址，并在浏览器本地持久化。\n- 三个模块的数据相互隔离，刷新或重新打开页面后仍可恢复。\n\n## Capabilities\n\n### New Capabilities\n- `todos`: 待办清单的创建、完成状态切换、删除与本地持久化能力。\n- `notes`: 笔记的创建、编辑、删除与本地持久化能力。\n- `quick-links`: 快捷链接的创建、编辑、删除、打开与本地持久化能力。\n\n### Modified Capabilities\n\n<!-- 本次为全新功能，无既有 capability 需求变更。 -->\n\n## Impact\n\n- 代码：新增 `app/` 下的静态页面与前端脚本/样式（如 `app/index.html`、`app/app.js`、`app/styles.css`）。\n- 依赖：不新增第三方运行时依赖，仅使用浏览器原生 API（DOM、`localStorage`）。\n- 系统：无需后端服务、数据库或网络接口；通过 `node e2e/server.mjs` 提供静态文件即可运行。\n- 验收：新增 Playwright E2E 用例，覆盖三个模块的核心行为与本地持久化。\n"
+    },
+    {
+      "name": "design.md",
+      "title": "设计说明 design.md",
+      "content": "# Design\n\n## Context\n\n仓库当前只有流水线骨架，`app/` 目录为空；E2E 通过 `node e2e/server.mjs` 把 `app/` 作为静态站点托管在 `http://127.0.0.1:4173`，Playwright 用 `page.goto('/')` 访问。约束是纯静态页面 + 浏览器本地存储，不引入后端。动机见 `proposal.md - Why`，可观测行为见三个 delta spec。\n\n## Goals / Non-Goals\n\n**Goals:**\n- 用最少的原生前端技术（HTML/CSS/JavaScript，`localStorage`）交付可交互的单页应用。\n- 三个模块各自独立存储键，互不干扰。\n- 每个模块的增删改查都有稳定的 DOM 标识，便于 E2E 选择器定位。\n\n**Non-Goals:**\n- 不引入前端框架、构建工具、CSS 预处理器或第三方运行时依赖。\n- 不实现账号、同步、导出、搜索、拖拽排序等超出需求的功能。\n- 不做服务端数据备份或跨设备同步。\n\n## Decisions\n\n- **单文件或多文件结构**：采用 `app/index.html` + `app/styles.css` + `app/app.js` 的分离结构，页面结构、样式、逻辑各司其职；不采用内联单文件，便于阅读与维护。\n- **数据存储**：使用 `localStorage` 分别以 `todos`、`notes`、`quickLinks` 三个键保存 JSON 数组；不采用 `sessionStorage` 或 IndexedDB，因为需求是跨会话本地持久化且数据量小。\n- **数据模型**：待办用 `{ id, text, done }`；笔记用 `{ id, content, updatedAt }`；快捷链接用 `{ id, name, url }`；`id` 用 `crypto.randomUUID()`（不支持时回退到时间戳 + 随机数）。\n- **渲染方式**：每次状态变更后重渲染对应模块列表，数据以内存数组为唯一数据源，先更新内存再写 `localStorage` 再渲染；不采用细粒度 DOM 操作，降低状态不一致风险。\n- **安全与链接打开**：快捷链接打开使用 `<a target=\"_blank\" rel=\"noopener noreferrer\">`，避免 `window.opener` 风险；新链接仅对空白/格式做基础校验，不要求严格 URL 规范化。\n- **可测试性**：为每个操作控件设置稳定的 `data-testid`（如 `todo-input`、`todo-add`、`note-add`、`link-add`），E2E 用例据此定位；不依赖易变的中文文案作为唯一选择器。\n- **无障碍与错误反馈**：空输入不做静默失败，用简单提示文本给出反馈；不引入弹窗/组件库。\n\n## Risks / Trade-offs\n\n- [localStorage 容量限制（通常约 5MB）] → 当前单用户文本数据量远低于限制；仅在数据无法写入时给出提示，不做容量扩展。\n- [多标签页不同步] → 本需求按单页单标签使用设计，暂不监听 `storage` 事件；如后续需要可再加。\n- [E2E 依赖 DOM 标识] → 在实现任务中把 `data-testid` 与验收场景一一对应，避免选择器漂移导致测试脆弱。\n- [无构建步骤可能让 JS 随规模增大难以维护] → 当前三个模块规模小，保持原生脚本；规模增长后再引入模块化或构建。\n"
+    },
+    {
+      "name": "tasks.md",
+      "title": "任务清单 tasks.md",
+      "content": "# Tasks\n\n## 1. 页面骨架与样式\n\n- [x] 1.1 创建 `app/index.html`，包含待办、笔记、快捷链接三个模块区域及必要的 `data-testid`，验证 `node e2e/server.mjs` 启动后访问 `http://127.0.0.1:4173` 能返回页面且三块区域可见\n- [x] 1.2 创建 `app/styles.css` 并引入页面，验证三个模块在页面上布局清晰、输入控件和列表可见\n- [x] 1.3 创建 `app/app.js` 并实现 `localStorage` 读写工具（按 `todos`、`notes`、`quickLinks` 三键初始化），验证浏览器控制台无脚本报错且存储键可读取\n\n## 2. 待办清单模块\n\n- [x] 2.1 实现待办新增：输入非空内容后提交加入列表并清空输入，空输入不新增且给出提示，验证手工操作与 `todos/spec.md` 的「用户新增待办」场景一致\n- [x] 2.2 实现待办完成状态切换，验证点击完成控件可在完成/未完成间切换\n- [x] 2.3 实现待办删除，验证点击删除按钮后该待办从列表消失\n- [x] 2.4 实现待办持久化：新增/切换/删除后重载页面保持一致，验证 `todos/spec.md` 的「待办本地持久化」场景\n\n## 3. 笔记模块\n\n- [x] 3.1 实现笔记新增：非空内容保存后加入列表并清空输入，空内容不新增且给出提示，验证与 `notes/spec.md` 的「用户新增笔记」场景一致\n- [x] 3.2 实现笔记编辑：编辑已有笔记并保存后列表显示最新内容，验证与「用户编辑笔记」场景一致\n- [x] 3.3 实现笔记删除，验证点击删除按钮后该笔记从列表消失\n- [x] 3.4 实现笔记持久化：新增/编辑/删除后重载页面保持一致，验证 `notes/spec.md` 的「笔记本地持久化」场景\n\n## 4. 快捷链接模块\n\n- [x] 4.1 实现快捷链接新增：名称与网址非空时提交加入列表并清空输入，名称或网址为空不新增且给出提示，验证与 `quick-links/spec.md` 的「用户新增快捷链接」场景一致\n- [x] 4.2 实现快捷链接打开：点击链接以新标签页打开目标网址并带 `rel=\"noopener noreferrer\"`，验证点击后浏览器新开标签且地址正确\n- [x] 4.3 实现快捷链接编辑：编辑并保存后列表显示最新名称与网址，验证与「用户编辑快捷链接」场景一致\n- [x] 4.4 实现快捷链接删除，验证点击删除按钮后该链接从列表消失\n- [x] 4.5 实现快捷链接持久化：新增/编辑/删除后重载页面保持一致，验证 `quick-links/spec.md` 的「快捷链接本地持久化」场景\n\n## 5. 集成验证\n\n- [x] 5.1 手工核对三个模块的数据互不串扰（分别写入后各自列表只显示本模块数据），验证无跨模块污染\n- [x] 5.2 运行 `openspec validate \"demand-reczz28ukfptdrui\" --strict` 确认产物通过严格校验\n- [x] 5.3 生成并运行覆盖三个 spec 全部验收场景的 Playwright E2E 用例，验证全部通过\n\n## Workflow follow-up\n\n- 实现与验收通过后归档本 change（`openspec archive \"demand-reczz28ukfptdrui\" --yes`），并确认归档后的 specs 可被 E2E 用例引用。\n"
+    },
+    {
+      "name": "specs/notes/spec.md",
+      "title": "能力 Spec · notes",
+      "content": "# Spec Delta\n\n## Purpose\n\n提供笔记的创建、编辑、删除与本地持久化能力，使用户能在一个页面上记录和管理个人笔记。\n\n## ADDED Requirements\n\n### Requirement: 用户新增笔记\n\n当用户提交非空笔记内容时，系统 MUST 创建一条新笔记并显示在笔记列表中。\n\n#### Scenario: 成功新增笔记\n- **WHEN** 用户在笔记输入区输入非空内容并保存\n- **THEN** 系统在笔记列表中显示该新笔记，并清空输入区\n\n#### Scenario: 空内容不新增\n- **WHEN** 用户在笔记内容为空或仅空白时保存\n- **THEN** 系统不创建笔记，列表中不出现新条目\n\n### Requirement: 用户编辑笔记\n\n当用户修改已有笔记并保存时，系统 MUST 更新该笔记的显示内容。\n\n#### Scenario: 编辑并保存笔记\n- **WHEN** 用户编辑某条已有笔记的内容并保存\n- **THEN** 系统在笔记列表中显示更新后的内容\n\n### Requirement: 用户删除笔记\n\n当用户删除某条笔记时，系统 MUST 将该笔记从列表中移除。\n\n#### Scenario: 删除笔记\n- **WHEN** 用户点击笔记的删除按钮\n- **THEN** 系统将该笔记从笔记列表中移除\n\n### Requirement: 笔记本地持久化\n\n当页面重新加载或重新打开时，系统 MUST 从浏览器本地存储恢复笔记列表及内容。\n\n#### Scenario: 重载后恢复笔记\n- **WHEN** 用户已创建或编辑若干笔记并重新加载页面\n- **THEN** 系统在笔记列表中恢复显示这些笔记及其最新内容\n\n#### Scenario: 删除后重载保持一致\n- **WHEN** 用户删除某条笔记并重新加载页面\n- **THEN** 系统不显示已删除的笔记\n"
+    },
+    {
+      "name": "specs/quick-links/spec.md",
+      "title": "能力 Spec · quick-links",
+      "content": "# Spec Delta\n\n## Purpose\n\n提供快捷链接的创建、编辑、删除、打开与本地持久化能力，使用户能在一个页面上收藏并快速访问常用网址。\n\n## ADDED Requirements\n\n### Requirement: 用户新增快捷链接\n\n当用户提交非空的链接名称与有效网址时，系统 MUST 创建一条快捷链接并显示在链接列表中。\n\n#### Scenario: 成功新增快捷链接\n- **WHEN** 用户输入链接名称与有效网址并提交\n- **THEN** 系统在快捷链接列表中显示该链接及其名称，并清空输入\n\n#### Scenario: 名称或网址为空不新增\n- **WHEN** 用户提交时链接名称或网址为空\n- **THEN** 系统不创建快捷链接，列表中不出现新条目\n\n### Requirement: 用户打开快捷链接\n\n当用户点击快捷链接时，系统 MUST 在新标签页打开该链接对应的目标网址。\n\n#### Scenario: 打开目标网址\n- **WHEN** 用户点击快捷链接\n- **THEN** 系统在新标签页打开该快捷链接指向的网址\n\n### Requirement: 用户编辑快捷链接\n\n当用户修改已有快捷链接的名称或网址并保存时，系统 MUST 更新该链接的显示信息。\n\n#### Scenario: 编辑并保存快捷链接\n- **WHEN** 用户编辑某条快捷链接的名称或网址并保存\n- **THEN** 系统在快捷链接列表中显示更新后的名称与网址\n\n### Requirement: 用户删除快捷链接\n\n当用户删除某条快捷链接时，系统 MUST 将该链接从列表中移除。\n\n#### Scenario: 删除快捷链接\n- **WHEN** 用户点击快捷链接的删除按钮\n- **THEN** 系统将该快捷链接从快捷链接列表中移除\n\n### Requirement: 快捷链接本地持久化\n\n当页面重新加载或重新打开时，系统 MUST 从浏览器本地存储恢复快捷链接列表及信息。\n\n#### Scenario: 重载后恢复快捷链接\n- **WHEN** 用户已新增或编辑若干快捷链接并重新加载页面\n- **THEN** 系统在快捷链接列表中恢复显示这些链接及其最新信息\n\n#### Scenario: 删除后重载保持一致\n- **WHEN** 用户删除某条快捷链接并重新加载页面\n- **THEN** 系统不显示已删除的快捷链接\n"
+    },
+    {
+      "name": "specs/todos/spec.md",
+      "title": "能力 Spec · todos",
+      "content": "# Spec Delta\n\n## Purpose\n\n提供待办清单的创建、完成状态切换、删除与本地持久化能力，使用户能在一个页面上管理个人待办事项。\n\n## ADDED Requirements\n\n### Requirement: 用户新增待办\n\n当用户提交非空待办内容时，系统 MUST 将新待办添加到待办清单并显示在列表中。\n\n#### Scenario: 成功新增待办\n- **WHEN** 用户在待办输入框输入非空内容并提交\n- **THEN** 系统在待办列表中显示该新待办，并清空输入框\n\n#### Scenario: 空内容不新增\n- **WHEN** 用户在待办输入框内容为空或仅空白时提交\n- **THEN** 系统不新增待办，列表中不出现新条目\n\n### Requirement: 用户切换待办完成状态\n\n当用户对待办执行完成状态切换时，系统 MUST 在该待办的已完成与未完成状态之间切换。\n\n#### Scenario: 切换完成状态\n- **WHEN** 用户点击待办的完成状态控件\n- **THEN** 系统将该待办从未完成切换为已完成，再次点击则切换回未完成\n\n### Requirement: 用户删除待办\n\n当用户删除某条待办时，系统 MUST 将该待办从清单中移除。\n\n#### Scenario: 删除待办\n- **WHEN** 用户点击待办的删除按钮\n- **THEN** 系统将该待办从待办列表中移除\n\n### Requirement: 待办本地持久化\n\n当页面重新加载或重新打开时，系统 MUST 从浏览器本地存储恢复待办清单及其完成状态。\n\n#### Scenario: 重载后恢复待办\n- **WHEN** 用户已新增若干待办并重新加载页面\n- **THEN** 系统在待办列表中恢复显示这些待办及其完成状态\n\n#### Scenario: 删除后重载保持一致\n- **WHEN** 用户删除某条待办并重新加载页面\n- **THEN** 系统不显示已删除的待办\n"
+    }
+  ]
+}
